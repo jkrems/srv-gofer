@@ -1,0 +1,36 @@
+{
+  "name": "srv-gofer",
+  "version": "0.0.0",
+  "description": "Gofer with SRV record support",
+  "main": "lib/gofer.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "eslint lib test && mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jkrems/srv-gofer.git"
+  },
+  "keywords": [
+    "http",
+    "client",
+    "srv"
+  ],
+  "author": {
+    "name": "Jan Krems",
+    "email": "jan.krems@groupon.com"
+  },
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/jkrems/srv-gofer/issues"
+  },
+  "homepage": "https://github.com/jkrems/srv-gofer",
+  "devDependencies": {
+    "assertive": "^2.0.2",
+    "eslint": "^1.10.1",
+    "eslint-config-groupon": "^1.1.0",
+    "mocha": "^2.3.4"
+  }
+}
