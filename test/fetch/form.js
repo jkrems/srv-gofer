@@ -35,64 +35,35 @@ var assert = require('assertive');
 
 var testServer = require('../test-server');
 
-describe('fetch/json', function() {
+describe('fetch/form', function() {
   var server = testServer.echo();
 
-  it('can send `true` as JSON', function() {
+  it('can send any object as a form', function() {
     return server.fetch('/', {
       method: 'POST',
-      json: true,
+      form: { tags: [ 'fancy', 'fun' ], nested: { thing: 42 } },
     }).json().then(function(echo) {
-      assert.equal('true', echo.body);
-      assert.equal('4', echo.headers['content-length']);
-      assert.equal('application/json', echo.headers['content-type']);
-    });
-  });
-
-  it('can send `false` as JSON', function() {
-    return server.fetch('/', {
-      method: 'POST',
-      json: false,
-    }).json().then(function(echo) {
-      assert.equal('false', echo.body);
-      assert.equal('5', echo.headers['content-length']);
-      assert.equal('application/json', echo.headers['content-type']);
-    });
-  });
-
-  it('can send objects as JSON', function() {
-    var payload = { x: '💩' };
-    var serialized = '{"x":"💩"}';
-    return server.fetch('/', {
-      method: 'POST',
-      json: payload,
-    }).json().then(function(echo) {
-      assert.deepEqual(payload, JSON.parse(echo.body));
-      assert.equal(serialized, echo.body);
-      assert.expect('it\'s not naïve string length',
-        serialized.length < +echo.headers['content-length']);
-      assert.equal('12', echo.headers['content-length']);
-      assert.equal('application/json', echo.headers['content-type']);
+      assert.equal('tags[0]=fancy&tags[1]=fun&nested[thing]=42',
+        decodeURIComponent(echo.body));
+      assert.equal('application/x-www-form-urlencoded', echo.headers['content-type']);
     });
   });
 
   it('will not send null', function() {
     return server.fetch('/', {
       method: 'POST',
-      json: null,
+      form: null,
     }).json().then(function(echo) {
       assert.equal('', echo.body);
       assert.equal(undefined, echo.headers['content-type']);
     });
   });
 
-  it('throws immediately if the value cannot be serialized', function() {
-    var obj = {};
-    obj.cycle = obj;
-
+  it('generates an early error when it\'s not an object', function() {
     var error = assert.throws(function() {
-      server.fetch('/', { method: 'POST', json: obj });
+      server.fetch('/', { method: 'POST', form: 'a string' });
     });
-    assert.include('circular structure', error.message);
+    assert.equal('Invalid form body (string, expected object)', error.message);
+    assert.equal('TypeError', error.name);
   });
 });
