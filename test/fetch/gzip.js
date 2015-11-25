@@ -31,65 +31,60 @@
  */
 'use strict';
 
-var zlib = require('zlib');
+var fs = require('fs');
 
-function getStreamForResponse(res) {
-  var encoding =
-    (res.headers['content-encoding'] || 'identity').trim().toLowerCase();
+var assert = require('assertive');
 
-  switch (encoding) {
-  case 'gzip':
-    return res.pipe(zlib.createGunzip());
+var express = require('express');
+var compression = require('compression');
 
-  case 'identity':
-    return res;
+var testServer = require('../test-server');
 
-  default:
-    // TODO: Fail the response
-    process.nextTick(function _invalidEncoding() {
-      res.emit('error', new Error('Unknown content-encoding ' + encoding));
+var LICENSE = fs.readFileSync('LICENSE', 'utf8');
+
+function unexpected() {
+  throw new Error('Unexpected success');
+}
+
+describe('fetch/gzip', function() {
+  var app = express();
+  app.get('/gzip', compression(), function(req, res) {
+    res.json({
+      ok: true,
+      headers: req.headers,
+      // This ensures we actually do compression
+      padding: [
+        LICENSE, LICENSE, LICENSE, LICENSE, LICENSE,
+        LICENSE, LICENSE, LICENSE, LICENSE, LICENSE,
+      ],
     });
-    return res;
-  }
-}
+  });
+  app.get('/invalid-gzip', function(req, res) {
+    res.setHeader('Content-Encoding', 'gzip');
+    res.end('Totally not GZIP');
+  });
+  var server = testServer.create(app);
 
-function readBody(resolve, reject) {
-  var stream = this;
-  var chunks = [];
+  it('works with gzip', function() {
+    return server.fetch('/gzip')
+      .then(function(res) {
+        return res.json().then(function(echo) {
+          // Step 1: We triggered compression
+          assert.equal('gzip', res.headers['content-encoding']);
 
-  function addChunk(chunk) {
-    chunks.push(chunk);
-  }
+          // Step 2: We can actually understand the compressed data
+          assert.equal(true, echo.ok);
+          assert.equal('gzip', echo.headers['accept-encoding']);
+        });
+      });
+  });
 
-  function concatChunks() {
-    resolve(Buffer.concat(chunks));
-  }
-
-  stream.on('data', addChunk);
-  stream.once('end', concatChunks);
-  stream.once('error', reject);
-}
-
-function parseBody(rawBody) {
-  return JSON.parse(rawBody.toString());
-}
-
-module.exports = {
-  stream: {
-    value: function getStream() {
-      return getStreamForResponse(this);
-    },
-  },
-
-  rawBody: {
-    value: function rawBody() {
-      return new Promise(readBody.bind(this.stream()));
-    },
-  },
-
-  json: {
-    value: function json() {
-      return this.rawBody().then(parseBody);
-    },
-  },
-};
+  it('fails on invalid gzip', function() {
+    return server.fetch('/invalid-gzip')
+      .then(function(res) {
+        return res.json().then(unexpected, function(error) {
+          assert.equal('incorrect header check', error.message);
+        });
+      });
+  });
+});

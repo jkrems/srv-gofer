@@ -29,8 +29,10 @@
   "homepage": "https://github.com/jkrems/srv-gofer",
   "devDependencies": {
     "assertive": "^2.0.2",
+    "compression": "^1.6.0",
     "eslint": "^1.10.1",
     "eslint-config-groupon": "^1.1.0",
+    "express": "^4.13.3",
     "mocha": "^2.3.4"
   },
   "dependencies": {
