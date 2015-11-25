@@ -11,14 +11,21 @@ describe('fetch', function() {
 
   before('start echo server', function(done) {
     server = http.createServer(function(req, res) {
-      res.writeHead(200, {
-        'Content-Type': 'application/json',
+      var chunks = [];
+      req.on('data', function(chunk) {
+        chunks.push(chunk);
       });
-      res.end(JSON.stringify({
-        method: req.method,
-        url: req.url,
-        headers: req.headers,
-      }));
+      req.on('end', function() {
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+        });
+        res.end(JSON.stringify({
+          method: req.method,
+          url: req.url,
+          headers: req.headers,
+          body: Buffer.concat(chunks).toString()
+        }));
+      });
     });
     server.on('error', done);
     server.listen(3000, function() { done(); });
@@ -36,6 +43,7 @@ describe('fetch', function() {
       .then(function(echo) {
         assert.equal('GET', echo.method);
         assert.equal('/foo', echo.url);
+        assert.equal('', echo.body);
         assert.equal('overriding headers works thanks to key ordering',
           'other stuff', echo.headers['x-fancy']);
       });
