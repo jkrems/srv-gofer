@@ -33,30 +33,36 @@
 
 var assert = require('assertive');
 
-var testServer = require('./test-server');
+var testServer = require('../test-server');
 
-describe('fetch', function() {
+describe('fetch/auth', function() {
   var server = testServer.echo();
+  var expected = 'Basic ' + new Buffer('quinn:s3cr3t').toString('base64');
 
-  it('can fetch stuff', function() {
-    var headers = { 'x-Fancy': 'stuff' };
-    headers['X-Fancy'] = 'other stuff';
-    return server.fetch('/foo', { headers: headers })
-      .json()
-      .then(function(echo) {
-        assert.equal('GET', echo.method);
-        assert.equal('/foo', echo.url);
-        assert.equal('', echo.body);
-        assert.equal('overriding headers works thanks to key ordering',
-          'other stuff', echo.headers['x-fancy']);
-      });
+  function verifyAuth(echo) {
+    assert.equal(expected, echo.headers.authorization);
+  }
+
+  it('works via baseUrl', function() {
+    return server.fetch('/', {
+      baseUrl: 'http://quinn:s3cr3t@localhost:' + server.address().port,
+    }).json().then(verifyAuth);
   });
 
-  it('uses qs-style query strings', function() {
-    return server.fetch('/', { qs: { thing: [ 'abc', 'xyz' ] } })
-      .json()
-      .then(function(echo) {
-        assert.equal('/?thing[0]=abc&thing[1]=xyz', decodeURIComponent(echo.url));
-      });
+  it('works via auth=<string>', function() {
+    return server.fetch('/', { auth: 'quinn:s3cr3t' })
+      .json().then(verifyAuth);
+  });
+
+  it('works via auth={user,pass}', function() {
+    var authObject = { user: 'quinn', pass: 's3cr3t' };
+    return server.fetch('/', { auth: authObject })
+      .json().then(verifyAuth);
+  });
+
+  it('works via auth={username,password}', function() {
+    var authObject = { username: 'quinn', password: 's3cr3t' };
+    return server.fetch('/', { auth: authObject })
+      .json().then(verifyAuth);
   });
 });

@@ -33,30 +33,45 @@
 
 var assert = require('assertive');
 
-var testServer = require('./test-server');
+var testServer = require('../test-server');
 
-describe('fetch', function() {
+describe('fetch/json', function() {
   var server = testServer.echo();
 
-  it('can fetch stuff', function() {
-    var headers = { 'x-Fancy': 'stuff' };
-    headers['X-Fancy'] = 'other stuff';
-    return server.fetch('/foo', { headers: headers })
-      .json()
-      .then(function(echo) {
-        assert.equal('GET', echo.method);
-        assert.equal('/foo', echo.url);
-        assert.equal('', echo.body);
-        assert.equal('overriding headers works thanks to key ordering',
-          'other stuff', echo.headers['x-fancy']);
-      });
+  it('can send `true` as JSON', function() {
+    return server.fetch('/', {
+      method: 'POST',
+      json: true,
+    }).json().then(function(echo) {
+      assert.equal('true', echo.body);
+      assert.equal('4', echo.headers['content-length']);
+      assert.equal('application/json', echo.headers['content-type']);
+    });
   });
 
-  it('uses qs-style query strings', function() {
-    return server.fetch('/', { qs: { thing: [ 'abc', 'xyz' ] } })
-      .json()
-      .then(function(echo) {
-        assert.equal('/?thing[0]=abc&thing[1]=xyz', decodeURIComponent(echo.url));
-      });
+  it('can send objects as JSON', function() {
+    var payload = { x: '💩' };
+    var serialized = '{"x":"💩"}';
+    return server.fetch('/', {
+      method: 'POST',
+      json: payload,
+    }).json().then(function(echo) {
+      assert.deepEqual(payload, JSON.parse(echo.body));
+      assert.equal(serialized, echo.body);
+      assert.expect('it\'s not naïve string length',
+        serialized.length < +echo.headers['content-length']);
+      assert.equal('12', echo.headers['content-length']);
+      assert.equal('application/json', echo.headers['content-type']);
+    });
+  });
+
+  it('throws immediately if the value cannot be serialized', function() {
+    var obj = {};
+    obj.cycle = obj;
+
+    var error = assert.throws(function() {
+      server.fetch('/', { method: 'POST', json: obj });
+    });
+    assert.include('circular structure', error.message);
   });
 });
