@@ -60,6 +60,11 @@ describe('fetch', function() {
     });
     server.on('error', done);
     server.listen(3000, function() { done(); });
+    server.fetch = function fetch_(uri, options) {
+      options = options || {};
+      options.baseUrl = 'http://localhost:' + server.address().port;
+      return fetch(uri, options);
+    };
   });
 
   after('close echo server', function(done) {
@@ -69,7 +74,7 @@ describe('fetch', function() {
   it('can fetch stuff', function() {
     var headers = { 'x-Fancy': 'stuff' };
     headers['X-Fancy'] = 'other stuff';
-    return fetch('http://localhost:3000/foo', { headers: headers })
+    return server.fetch('/foo', { headers: headers })
       .json()
       .then(function(echo) {
         assert.equal('GET', echo.method);
@@ -77,6 +82,14 @@ describe('fetch', function() {
         assert.equal('', echo.body);
         assert.equal('overriding headers works thanks to key ordering',
           'other stuff', echo.headers['x-fancy']);
+      });
+  });
+
+  it('uses qs-style query strings', function() {
+    return server.fetch('/', { qs: { thing: [ 'abc', 'xyz' ] } })
+      .json()
+      .then(function(echo) {
+        assert.equal('/?thing[0]=abc&thing[1]=xyz', decodeURIComponent(echo.url));
       });
   });
 });
