@@ -23,7 +23,7 @@ describe('fetch', function() {
           method: req.method,
           url: req.url,
           headers: req.headers,
-          body: Buffer.concat(chunks).toString()
+          body: Buffer.concat(chunks).toString(),
         }));
       });
     });
