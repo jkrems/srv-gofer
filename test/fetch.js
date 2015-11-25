@@ -33,6 +33,8 @@
 
 var assert = require('assertive');
 
+var Gofer = require('../');
+
 var testServer = require('./test-server');
 
 describe('fetch', function() {
@@ -58,5 +60,12 @@ describe('fetch', function() {
       .then(function(echo) {
         assert.equal('/?thing[0]=abc&thing[1]=xyz', decodeURIComponent(echo.url));
       });
+  });
+
+  it('fails fast for invalid urls', function() {
+    var error = assert.throws(function() {
+      Gofer.fetch('some-invalid/url');
+    });
+    assert.equal('Invalid URI "some-invalid/url"', error.message);
   });
 });
