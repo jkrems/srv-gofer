@@ -31,45 +31,12 @@
  */
 'use strict';
 
-var http = require('http');
-
 var assert = require('assertive');
 
-var fetch = require('../lib/fetch');
+var testServer = require('./test-server');
 
 describe('fetch', function() {
-  var server;
-
-  before('start echo server', function(done) {
-    server = http.createServer(function(req, res) {
-      var chunks = [];
-      req.on('data', function(chunk) {
-        chunks.push(chunk);
-      });
-      req.on('end', function() {
-        res.writeHead(200, {
-          'Content-Type': 'application/json',
-        });
-        res.end(JSON.stringify({
-          method: req.method,
-          url: req.url,
-          headers: req.headers,
-          body: Buffer.concat(chunks).toString(),
-        }));
-      });
-    });
-    server.on('error', done);
-    server.listen(3000, function() { done(); });
-    server.fetch = function fetch_(uri, options) {
-      options = options || {};
-      options.baseUrl = 'http://localhost:' + server.address().port;
-      return fetch(uri, options);
-    };
-  });
-
-  after('close echo server', function(done) {
-    server.close(done);
-  });
+  var server = testServer.echo();
 
   it('can fetch stuff', function() {
     var headers = { 'x-Fancy': 'stuff' };
@@ -91,5 +58,36 @@ describe('fetch', function() {
       .then(function(echo) {
         assert.equal('/?thing[0]=abc&thing[1]=xyz', decodeURIComponent(echo.url));
       });
+  });
+
+  describe('auth', function() {
+    var expected = 'Basic ' + new Buffer('quinn:s3cr3t').toString('base64');
+
+    function verifyAuth(echo) {
+      assert.equal(expected, echo.headers.authorization);
+    }
+
+    it('works via baseUrl', function() {
+      return server.fetch('/', {
+        baseUrl: 'http://quinn:s3cr3t@localhost:' + server.address().port,
+      }).json().then(verifyAuth);
+    });
+
+    it('works via auth=<string>', function() {
+      return server.fetch('/', { auth: 'quinn:s3cr3t' })
+        .json().then(verifyAuth);
+    });
+
+    it('works via auth={user,pass}', function() {
+      var authObject = { user: 'quinn', pass: 's3cr3t' };
+      return server.fetch('/', { auth: authObject })
+        .json().then(verifyAuth);
+    });
+
+    it('works via auth={username,password}', function() {
+      var authObject = { username: 'quinn', password: 's3cr3t' };
+      return server.fetch('/', { auth: authObject })
+        .json().then(verifyAuth);
+    });
   });
 });

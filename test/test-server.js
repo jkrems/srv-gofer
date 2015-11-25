@@ -31,6 +31,48 @@
  */
 'use strict';
 
-var fetch = require('./fetch');
+var http = require('http');
 
-exports.fetch = fetch;
+var fetch = require('../').fetch;
+
+function createTestServer(handler) {
+  var server = http.createServer(handler);
+
+  before('start echo server', function(done) {
+    server.on('error', done);
+    server.listen(3000, function() { done(); });
+    server.fetch = function fetch_(uri, options) {
+      options = options || {};
+      options.baseUrl = options.baseUrl || 'http://localhost:' + server.address().port;
+      return fetch(uri, options);
+    };
+  });
+
+  after('close echo server', function(done) {
+    server.close(done);
+  });
+
+  return server;
+}
+exports.create = createTestServer;
+
+function echoServer() {
+  return createTestServer(function(req, res) {
+    var chunks = [];
+    req.on('data', function(chunk) {
+      chunks.push(chunk);
+    });
+    req.on('end', function() {
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+      });
+      res.end(JSON.stringify({
+        method: req.method,
+        url: req.url,
+        headers: req.headers,
+        body: Buffer.concat(chunks).toString(),
+      }));
+    });
+  });
+}
+exports.echo = echoServer;
