@@ -32,6 +32,7 @@
 'use strict';
 
 var http = require('http');
+var url = require('url');
 
 var fetch = require('../').fetch;
 
@@ -42,8 +43,14 @@ function createTestServer(handler) {
     server.on('error', done);
     server.listen(3000, function() { done(); });
     server.fetch = function fetch_(uri, options) {
+      var defaultBaseUrl = 'http://localhost:' + server.address().port;
+      if (typeof uri === 'object') {
+        options = uri;
+        options.baseUrl = options.baseUrl || defaultBaseUrl;
+        return fetch(options);
+      }
       options = options || {};
-      options.baseUrl = options.baseUrl || 'http://localhost:' + server.address().port;
+      options.baseUrl = options.baseUrl || defaultBaseUrl;
       return fetch(uri, options);
     };
   });
@@ -58,20 +65,47 @@ exports.create = createTestServer;
 
 function echoServer() {
   return createTestServer(function(req, res) {
+    var parsedUrl = url.parse(req.url, true);
+    var latency = +parsedUrl.query.__latency || 0;
+    var delay = +parsedUrl.query.__delay || 0;
+
     var chunks = [];
-    req.on('data', function(chunk) {
-      chunks.push(chunk);
-    });
-    req.on('end', function() {
-      res.writeHead(200, {
-        'Content-Type': 'application/json',
-      });
+
+    function writeBody() {
       res.end(JSON.stringify({
         method: req.method,
         url: req.url,
         headers: req.headers,
         body: Buffer.concat(chunks).toString(),
       }));
+    }
+
+    function writeResponse() {
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+      });
+      if (res.flushHeaders) {
+        res.flushHeaders();
+      } else {
+        res.flush();
+      }
+
+      if (delay) {
+        setTimeout(writeBody, delay);
+      } else {
+        writeBody();
+      }
+    }
+
+    req.on('data', function(chunk) {
+      chunks.push(chunk);
+    });
+    req.on('end', function() {
+      if (latency) {
+        setTimeout(writeResponse, latency);
+      } else {
+        writeResponse();
+      }
     });
   });
 }
