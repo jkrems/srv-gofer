@@ -36,6 +36,8 @@ var url = require('url');
 
 var fetch = require('../').fetch;
 
+var testApi = require('./test-api');
+
 function createTestServer(handler) {
   var server = http.createServer(handler);
 
@@ -62,6 +64,19 @@ function createTestServer(handler) {
   return server;
 }
 exports.create = createTestServer;
+
+function createApiServer() {
+  var server = createTestServer(testApi.createApp());
+  var client = server.client = Object.create(null);
+
+  before(function() {
+    /* eslint no-proto:0 */
+    client.__proto__ = testApi.createClient(server);
+  });
+
+  return server;
+}
+exports.api = createApiServer;
 
 function echoServer() {
   return createTestServer(function(req, res) {
