@@ -6,26 +6,10 @@ var express = require('express');
 
 var Gofer = require('../');
 
-
-//       if Url.parse(url).pathname == '/v1/zapp'
-//         res.writeHead 200, 'Content-Type': 'application/json'
-//         chunks = []
-//         req.on 'data', (chunk) -> chunks.push chunk
-//         req.on 'end', ->
-//           body = Buffer.concat(chunks).toString 'utf8'
-//           res.end JSON.stringify {url, method, headers, body}
-//       else if url == '/v1/crash'
-//         res.socket.destroy()
-//       else if url == '/v1/fail-json'
-//         res.writeHead 200, 'Content-Type': 'application/json'
-//         res.end '{some-invalid-json}'
-//       else
-//         res.writeHead 404, 'Content-Type': 'application/json'
-//         res.end JSON.stringify { message: 'not found' }
-
 function createApp() {
   var app = express();
-  app.get('/v1/zapp', function(req, res) {
+
+  app.all('/v1/zapp', function(req, res) {
     var chunks = [];
     req.on('data', function(chunk) { chunks.push(chunk); });
     req.on('end', function() {
@@ -38,6 +22,20 @@ function createApp() {
       });
     });
   });
+
+  app.get('/v1/crash', function(req) {
+    req.socket.destroy();
+  });
+
+  app.get('/v1/non-200-json', function(req, res) {
+    res.status(400).json({ reason: 'Wrong URL' });
+  });
+
+  app.get('/v1/fail-json', function(req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.end('{some-invalid-json}');
+  });
+
   return app;
 }
 exports.createApp = createApp;
@@ -55,7 +53,7 @@ MyApi.prototype.registerEndpoints({
     return function() { return request('/zapp'); };
   },
   fail: function(request) {
-    return function() { return request('/invalid'); };
+    return function() { return request('/non-200-json'); };
   },
   failJSON: function(request) {
     return function() { return request('/fail-json'); };

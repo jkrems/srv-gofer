@@ -67,7 +67,7 @@ exports.create = createTestServer;
 
 function createApiServer() {
   var server = createTestServer(testApi.createApp());
-  var client = server.client = Object.create(null);
+  var client = server.client = {};
 
   before(function() {
     /* eslint no-proto:0 */
