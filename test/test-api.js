@@ -80,7 +80,7 @@ MyApi.prototype.registerEndpoints({
   },
 });
 
-function createClient(server) {
+function createClient(server, protocol) {
   var port = server.address().port;
   return new MyApi({
     globalDefaults: {
@@ -88,7 +88,7 @@ function createClient(server) {
       appSha: 'mySha',
     },
     myApi: {
-      baseUrl: 'http://127.0.0.1:' + port + '/v1',
+      baseUrl: protocol + '//127.0.0.1:' + port + '/v1',
     },
   });
 }

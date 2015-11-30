@@ -31,21 +31,41 @@
  */
 'use strict';
 
+var fs = require('fs');
 var http = require('http');
+var https = require('https');
 var url = require('url');
 
 var fetch = require('../').fetch;
 
 var testApi = require('./test-api');
 
-function createTestServer(handler) {
-  var server = http.createServer(handler);
+var HTTPS_OPTIONS = {
+  cert: fs.readFileSync('test/ssl/localhost.crt'),
+  key: fs.readFileSync('test/ssl/localhost.key'),
+  passphrase: 'password',
+};
 
-  before('start echo server', function(done) {
+function createTestServer(handler, protocol) {
+  protocol = protocol || 'http:';
+
+  var server;
+  if (protocol === 'https:') {
+    server = https.createServer(HTTPS_OPTIONS, handler);
+  } else {
+    server = http.createServer(handler);
+  }
+
+  // This makes sure keep-alive connections don't mess with our server.close
+  server.setTimeout(250, function(socket) {
+    socket.destroy();
+  });
+
+  before('start test server', function(done) {
     server.on('error', done);
     server.listen(3000, function() { done(); });
     server.fetch = function fetch_(uri, options) {
-      var defaultBaseUrl = 'http://localhost:' + server.address().port;
+      var defaultBaseUrl = protocol + '//localhost:' + server.address().port;
       if (typeof uri === 'object') {
         options = uri;
         options.baseUrl = options.baseUrl || defaultBaseUrl;
@@ -57,7 +77,7 @@ function createTestServer(handler) {
     };
   });
 
-  after('close echo server', function(done) {
+  after('close test server', function(done) {
     server.close(done);
   });
 
@@ -65,20 +85,21 @@ function createTestServer(handler) {
 }
 exports.create = createTestServer;
 
-function createApiServer() {
-  var server = createTestServer(testApi.createApp());
+function createApiServer(protocol) {
+  protocol = protocol || 'http:';
+  var server = createTestServer(testApi.createApp(), protocol);
   var client = server.client = {};
 
   before(function() {
     /* eslint no-proto:0 */
-    client.__proto__ = testApi.createClient(server);
+    client.__proto__ = testApi.createClient(server, protocol);
   });
 
   return server;
 }
 exports.api = createApiServer;
 
-function echoServer() {
+function echoServer(protocol) {
   return createTestServer(function(req, res) {
     var parsedUrl = url.parse(req.url, true);
     var latency = +parsedUrl.query.__latency || 0;
@@ -122,6 +143,6 @@ function echoServer() {
         writeResponse();
       }
     });
-  });
+  }, protocol);
 }
 exports.echo = echoServer;
