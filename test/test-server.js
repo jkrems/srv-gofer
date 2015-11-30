@@ -92,7 +92,9 @@ function createApiServer(protocol) {
 
   before(function() {
     /* eslint no-proto:0 */
-    client.__proto__ = testApi.createClient(server, protocol);
+    var instance = testApi.createClient(server, protocol);
+    client.__proto__ = instance;
+    client.constructor = instance.constructor;
   });
 
   return server;
