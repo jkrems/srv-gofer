@@ -48,23 +48,6 @@ function assertRejects(promise) {
 describe('Gofer', function() {
   var myApi = testServer.api().client;
 
-  it('reacts properly to low-level errors', function() {
-    return assertRejects(myApi.crash().json())
-      .then(function(error) {
-        assert.equal('socket hang up', error.message);
-      });
-  });
-
-  it('passes through errors', function() {
-    return assertRejects(myApi.fail().json())
-      .then(function(error) {
-        var OUT_OF_RANGE = 'API Request returned a response outside the status code range (code: 400, range: [200, 299])';
-        assert.equal(OUT_OF_RANGE, error.message);
-        assert.equal(400, error.statusCode);
-        assert.equal('Wrong URL', error.body.reason);
-      });
-  });
-
   it('does not swallow query parameters', function() {
     return myApi.query().json()
       .then(function(reqMirror) {

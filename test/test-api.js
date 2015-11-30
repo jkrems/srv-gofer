@@ -41,17 +41,48 @@ function createApp() {
   var app = express();
 
   app.all('/v1/zapp', function(req, res) {
+    var latency = +req.query.__latency || 0;
+    var delay = +req.query.__delay || 0;
     var chunks = [];
+
+    function writeBody() {
+      res.end(JSON.stringify({
+        method: req.method,
+        url: req.url,
+        headers: req.headers,
+        body: Buffer.concat(chunks).toString(),
+      }));
+    }
+
+    function writeResponse() {
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+      });
+      if (res.flushHeaders) {
+        res.flushHeaders();
+      } else {
+        res.flush();
+      }
+
+      if (delay) {
+        setTimeout(writeBody, delay);
+      } else {
+        writeBody();
+      }
+    }
+
     req.on('data', function(chunk) { chunks.push(chunk); });
     req.on('end', function() {
-      var body = Buffer.concat(chunks).toString();
-      res.json({
-        url: req.url,
-        method: req.method,
-        headers: req.headers,
-        body: body,
-      });
+      if (latency) {
+        setTimeout(writeResponse, latency);
+      } else {
+        writeResponse();
+      }
     });
+  });
+
+  app.get('/v1/redirect', function(req, res) {
+    res.redirect(301, '/v1/crash');
   });
 
   app.get('/v1/crash', function(req) {
