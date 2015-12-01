@@ -61,18 +61,23 @@ function createTestServer(handler, protocol) {
     socket.destroy();
   });
 
+  Object.defineProperty(server, 'baseUrl', {
+    get: function getBaseUrl() {
+      return protocol + '//localhost:' + server.address().port;
+    },
+  });
+
   before('start test server', function(done) {
     server.on('error', done);
     server.listen(3000, function() { done(); });
     server.fetch = function fetch_(uri, options) {
-      var defaultBaseUrl = protocol + '//localhost:' + server.address().port;
       if (typeof uri === 'object') {
         options = uri;
-        options.baseUrl = options.baseUrl || defaultBaseUrl;
+        options.baseUrl = options.baseUrl || server.baseUrl;
         return fetch(options);
       }
       options = options || {};
-      options.baseUrl = options.baseUrl || defaultBaseUrl;
+      options.baseUrl = options.baseUrl || server.baseUrl;
       return fetch(uri, options);
     };
   });
