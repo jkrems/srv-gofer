@@ -119,6 +119,15 @@ describe('Error handling', function() {
       });
     });
 
+    it('is emitted for JSON parse errors', function() {
+      return assertRejects(myApi.fetch('/fail-json').json())
+        .then(function(error) {
+          assert.expect(error instanceof SyntaxError);
+          assert.equal('{some-invalid-json}', error.source);
+          assert.equal('Emits the error on a response', error, errors[0]);
+        });
+    });
+
     it('emits special error for 400/bad request', function() {
       return assertRejects(myApi.fail())
         .then(function(error) {
