@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Gofer with SRV record support",
   "main": "lib/gofer.js",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
   "directories": {
     "test": "test"
   },
