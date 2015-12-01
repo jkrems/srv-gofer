@@ -34,6 +34,8 @@
 var assert = require('assertive');
 var parseQS = require('qs').parse;
 
+var Gofer = require('../');
+
 var testServer = require('./test-server');
 
 function assertRejects(promise) {
@@ -47,6 +49,22 @@ function assertRejects(promise) {
 
 describe('Gofer', function() {
   var myApi = testServer.api().client;
+
+  it('allows creating instances without proto properties', function() {
+    // In ES6 classes having serviceName as a prototype property
+    // is awkward. This supports passing serviceName and -Version
+    // into the parent constructor. In actual JavaScript syntax:
+    // class ES6Style {
+    //   constructor(config) {
+    //     super(config, 'es6Style', '0.1.2');
+    //   }
+    // }
+    function ES6Style(config) {
+      Gofer.call(this, config, 'es6Style', '0.1.2');
+    }
+    var es6Style = new ES6Style({ globalDefaults: { x: 42 } });
+    assert.equal('es6Style', es6Style.defaults.serviceName);
+  });
 
   it('does not swallow query parameters', function() {
     return myApi.query().json()
