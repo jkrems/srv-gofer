@@ -140,6 +140,7 @@ describe('Error handling', function() {
             error instanceof Gofer.StatusCodeError);
           assert.expect('Is a Gofer.BadRequestError',
             error instanceof Gofer.BadRequestError);
+          assert.truthy(error.headers);
         });
     });
 
