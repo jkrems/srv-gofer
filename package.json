@@ -1,6 +1,6 @@
 {
   "name": "srv-gofer",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Gofer with SRV record support",
   "main": "lib/gofer.js",
   "publishConfig": {
